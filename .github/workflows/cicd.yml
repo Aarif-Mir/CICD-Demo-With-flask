@@ -12,7 +12,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build The Docker Image
-      run: docker build . --file DockerFile --tag workflow-test:$(date +%s)
+      run: docker build . --tag workflow-test:$(date +%s)
+    #   run: docker build . --file Dockerfile --tag workflow-test:$(date +%s)  # --file specifies the Dockerfile to use when building the image.
     #   run: docker build -t flask-demo:${{ github.run_number }} . # github.run_number automatically increments on every workflow run (like 1, 2, 3, …).
 
   build-and-test:
