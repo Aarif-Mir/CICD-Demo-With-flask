@@ -1,0 +1,80 @@
+name: CI/CD for Dockerized Flask App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dockerbuild:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build The Docker Image
+      run: docker build . --file DockerFile --tag workflow-test:$(date +%s)
+    #   run: docker build -t flask-demo:${{ github.run_number }} . # github.run_number automatically increments on every workflow run (like 1, 2, 3, …).
+
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flask
+        pip install pytest
+
+    - name: Run tests
+      run: |
+        pytest
+
+  build-and-publish:
+    needs: build-and-test   
+    # needs: defines dependencies between jobs — it tells GitHub Actions:
+    # “Don’t start this job until another job (or several) has successfully completed.”
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # - name: Set up Docker Buildx   # Use docker/build-push-action to build/push images with Buildx same as docker buildx command
+    #   uses: docker/setup-buildx-action@v2
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./DockerFile
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/flasktest-app:latest
+
+    - name: Image digest
+      run: echo ${{ steps.build-and-publish.outputs.digest }}
+
+
+
+#       When you need --file
+
+# You use --file (or -f) when your Dockerfile:
+
+# Has a different name (e.g., DockerFile, AppDockerfile, Dockerfile.dev)
+
+# Lives in a different folder (e.g., docker/Dockerfile)
+
+# You want to build multiple images from different Dockerfiles in the same repo
